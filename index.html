@@ -1,0 +1,360 @@
+
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake Games 💖</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-image: url("https://i.ibb.co/xS4NKsv7/bg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      color: #ff4da6;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    #score {
+      color: #ff4da6;
+    }
+
+    canvas {
+      background: rgba(255, 255, 255, 0.2); /* semi-transparent */
+      border: 3px solid pink; /* visible border */
+      margin-top: 20px;
+      border-radius: 20px;
+    }
+
+    .controls {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    button {
+      padding: 15px;
+      font-size: 18px;
+      margin: 5px;
+      border: none;
+      border-radius: 15px;
+      background: #ff66b3;
+      color: white;
+      touch-action: manipulation;
+    }
+
+    #question {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-5px); }
+      80% { transform: translateX(5px); }
+      100% { transform: translateX(0); }
+    }
+
+    .shake {
+      animation: shake 0.3s;
+    }
+
+    #confettiCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>Collect 5 Apples to Unlock a Surprise 💖</h1>
+<h2 id="score">Score: 0 🍎</h2>
+
+<canvas id="gameCanvas" width="300" height="300"></canvas>
+
+<div class="controls">
+  <button onclick="setDir('UP')">⬆️</button>
+  <div>
+    <button onclick="setDir('LEFT')">⬅️</button>
+    <button onclick="setDir('DOWN')">⬇️</button>
+    <button onclick="setDir('RIGHT')">➡️</button>
+  </div>
+</div>
+
+<div id="question">
+  <h2>Will you be my Valentine? 💘</h2>
+  <button id="yesBtn" onclick="sayYes()">Yes 💖</button>
+  <button id="noBtn" onclick="shrinkNo()">No 🙈</button>
+</div>
+
+<audio id="bgMusic" loop playsinline>
+  <source src="bgmusicc.mp3" type="audio/mpeg">
+</audio>
+
+
+<audio id="winSound">
+  <source src="winbgmusic.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="afterWinMusic">
+  <source src="afterwinbgmusic.mp3" type="audio/mpeg">
+</audio>
+
+<canvas id="confettiCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const scoreDisplay = document.getElementById("score");
+const question = document.getElementById("question");
+const yesBtn = document.getElementById("yesBtn");
+const noBtn = document.getElementById("noBtn");
+const bgMusic = document.getElementById("bgMusic");
+const winSound = document.getElementById("winSound");
+const confettiCanvas = document.getElementById("confettiCanvas");
+const confettiCtx = confettiCanvas.getContext("2d");
+
+confettiCanvas.width = window.innerWidth;
+confettiCanvas.height = window.innerHeight;
+
+let box = 20;
+let snake = [{ x: 160, y: 160 }];
+let direction = "";
+let score = 0;
+let game = null;
+
+let food = { x: 0, y: 0 };
+
+placeFood(); // initial food placement
+
+function setDir(dir) {
+  if (
+    (dir === "UP" && direction === "DOWN") ||
+    (dir === "DOWN" && direction === "UP") ||
+    (dir === "LEFT" && direction === "RIGHT") ||
+    (dir === "RIGHT" && direction === "LEFT")
+  ) return;
+
+  direction = dir;
+  bgMusic.play().catch(() => {});
+  if (!game) game = setInterval(draw, 150);
+}
+
+function placeFood() {
+  let newFood;
+  do {
+    newFood = {
+      x: Math.floor(Math.random() * (canvas.width / box)) * box,
+      y: Math.floor(Math.random() * (canvas.height / box)) * box
+    };
+  } while (snake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
+  food = newFood;
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Draw snake
+  for (let i = 0; i < snake.length; i++) {
+    ctx.fillStyle = i === 0 ? "pink" : "#ff99cc";
+    ctx.fillRect(snake[i].x, snake[i].y, box, box);
+  }
+
+ 
+  ctx.fillStyle = "red";
+  ctx.fillRect(food.x, food.y, box, box);
+
+  let headX = snake[0].x;
+  let headY = snake[0].y;
+
+  if (direction === "LEFT") headX -= box;
+  if (direction === "RIGHT") headX += box;
+  if (direction === "UP") headY -= box;
+  if (direction === "DOWN") headY += box;
+
+ 
+  if (
+    headX < 0 || headY < 0 ||
+    headX >= canvas.width || headY >= canvas.height
+  ) {
+    clearInterval(game);
+    game = null;
+    alert("Game Over 💔");
+    resetGame();
+    return;
+  }
+
+ 
+  if (snake.some(segment => segment.x === headX && segment.y === headY)) {
+    clearInterval(game);
+    game = null;
+    alert("Game Over 💔");
+    resetGame();
+    return;
+  }
+
+ 
+  if (headX === food.x && headY === food.y) {
+    score++;
+    scoreDisplay.innerHTML = "Score: " + score + " 🍎";
+    placeFood();
+
+    if (score === 5) {
+  clearInterval(game);
+  bgMusic.pause();             
+  bgMusic.currentTime = 0;      
+  question.style.display = "block";
+  winSound.play().catch(() => {});
+  launchConfetti();
+}
+
+    winSound.addEventListener("ended", () => {
+    const afterWinMusic = document.getElementById("afterWinMusic");
+    afterWinMusic.play().catch(() => {});
+  }, { once: true });
+
+  } else {
+    snake.pop();
+  }
+
+  snake.unshift({ x: headX, y: headY });
+}
+
+function resetGame() {
+  snake = [{ x: 160, y: 160 }];
+  score = 0;
+  scoreDisplay.innerHTML = "Score: 0 🍎";
+  direction = "";
+  placeFood();
+}
+
+function launchConfetti() {
+  let pieces = [];
+  for (let i = 0; i < 100; i++) { 
+    pieces.push({
+      x: Math.random() * confettiCanvas.width,
+      y: Math.random() * confettiCanvas.height,
+      size: Math.random() * 10 + 10,
+      dy: Math.random() * 2 + 1,
+      dx: (Math.random() - 0.5) * 1, 
+      color: "#ff4da6"
+    });
+  }
+
+  function drawHeart(x, y, size, color) {
+    confettiCtx.fillStyle = color;
+    confettiCtx.beginPath();
+    confettiCtx.moveTo(x, y);
+    confettiCtx.bezierCurveTo(x, y - size / 2, x - size, y - size / 2, x - size, y + size / 4);
+    confettiCtx.bezierCurveTo(x - size, y + size, x, y + size * 1.5, x, y + size * 1.8);
+    confettiCtx.bezierCurveTo(x, y + size * 1.5, x + size, y + size, x + size, y + size / 4);
+    confettiCtx.bezierCurveTo(x + size, y - size / 2, x, y - size / 2, x, y);
+    confettiCtx.fill();
+  }
+
+  let startTime = Date.now();
+
+  function animate() {
+    let elapsed = Date.now() - startTime;
+    if (elapsed > 4000) { 
+      confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+      return;
+    }
+
+    confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+    for (let p of pieces) {
+      drawHeart(p.x, p.y, p.size, p.color);
+      p.y += p.dy;
+      p.x += p.dx;
+      if (p.y > confettiCanvas.height) p.y = 0;
+      if (p.x > confettiCanvas.width) p.x = 0;
+      if (p.x < 0) p.x = confettiCanvas.width;
+    }
+    requestAnimationFrame(animate);
+  }
+
+  animate();
+}
+
+
+
+let yesSize = 18;
+let noSize = 18;
+let noClickCount = 0;
+const noMessages = [
+  "Oh no! Try again 💔",
+  "Are you sure? 🤔",
+  "WHATTT WHYYY HUHUHUH",
+  "NO PA DIN PO??!!",
+  "BRUHHH...",
+  "OKAY SINO BA NAMAN AKO DBA",
+  "PLEASEEE HUHUH",
+  "OKAYY PO",
+  "LUHH OKAY NA NGA PO",
+  "HUHUHHUHU"
+];
+
+function shrinkNo() {
+  noClickCount++;
+  noSize -= 3;
+  yesSize += 5;
+  if (noSize < 8) noSize = 8;
+  noBtn.style.position = "relative";
+  noBtn.style.left = Math.random() * 50 - 25 + "px";
+  noBtn.style.top = Math.random() * 50 - 25 + "px";
+  yesBtn.style.fontSize = yesSize + "px";
+  const oldMsg = document.getElementById("noMsg");
+  if (oldMsg) oldMsg.remove();
+  const msg = noMessages[noClickCount - 1] || "You really said NO again! 😭";
+  const p = document.createElement("p");
+  p.id = "noMsg";
+  p.textContent = msg;
+  p.style.color = "red";
+  p.style.marginTop = "10px";
+  question.appendChild(p);
+  noBtn.classList.add("shake");
+  noBtn.addEventListener("animationend", () => {
+    noBtn.classList.remove("shake");
+  }, { once: true });
+}
+
+function sayYes() {
+  question.innerHTML = `
+    <h2>Yay!! 💕<br><br>
+    WHEN: February 15, 2026 @11pm;<br>
+    WHERE: Messenger Call;<br>
+    WHAT: PLAY SOME GAMES AND WATCH SOME ANIME
+    </h2>`;
+}
+
+document.addEventListener("keydown", (e) => {
+  if(e.key === "ArrowUp") setDir("UP");
+  if(e.key === "ArrowDown") setDir("DOWN");
+  if(e.key === "ArrowLeft") setDir("LEFT");
+  if(e.key === "ArrowRight") setDir("RIGHT");
+});
+</script>
+
+</body>
+</html>
